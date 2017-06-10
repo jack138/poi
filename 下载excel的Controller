@@ -1,0 +1,87 @@
+    /**
+     * 导出WAU数据到excel
+     * @param response 输出
+     * @param dateFrom 开始日期
+     * @param dateTo   结束日期
+     * @param productId 平台标识
+     * @throws Exception  异常.
+     */
+    @RequestMapping(value = "/wauexport", method = RequestMethod.GET)
+    public void wauexportExcel(HttpServletResponse response, String dateFrom, String dateTo, String productId)
+            throws Exception {
+        response.setContentType("text/html;charset=UTF-8");
+        response.setContentType("application/x-excel");
+
+        logger.info("导出功能入参dateFrom=" + dateFrom + ",dateTo=" + dateTo + ",productId=" + productId);
+        if (StringUtils.isEmpty(dateFrom) || StringUtils.isEmpty(dateTo)) {
+            SimpleDateFormat df = new SimpleDateFormat(STR_PATTERN);
+            dateTo = activeOnlineService.getSpecifiedDayBeforeDay(df.format(new Date()), 1);
+            dateFrom = activeOnlineService.getSpecifiedDayBeforeDay(dateTo, Integer.parseInt(SystemConfig.getProperty("DEFAULT_WEEKS")));
+            logger.info("默认日期dateFrom=" + dateFrom + ",dateTo=" + dateTo);
+        }
+        if (StringUtils.isEmpty(productId)) {
+            logger.info("未传入productId");
+            return;
+        }
+
+        byte[] bytes = activeOnlineService.wauExport(productId, dateFrom, dateTo);
+
+        response.setContentType("application/x-msdownload");
+        String filename = "WAU" + System.currentTimeMillis() + ".xlsx";
+        response.setHeader("Content-Disposition", "attachment;filename=" + filename);
+        response.setContentLength(bytes.length);
+        try {
+            if (response.getOutputStream() != null) {
+                response.getOutputStream().write(bytes);
+                response.getOutputStream().flush();
+                response.getOutputStream().close();
+            }
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+    }
+    
+    
+    
+    @RequestMapping(value = "/newExport", method = RequestMethod.GET)
+    public void newExcel(HttpServletResponse response, String dateFrom, String dateTo, String productId)
+            throws Exception {
+        response.setContentType("text/html;charset=UTF-8");
+        response.setContentType("application/x-excel");
+
+        logger.info("导出功能入参dateFrom=" + dateFrom + ",dateTo=" + dateTo + ",productId=" + productId);
+        if (StringUtils.isEmpty(dateFrom) || StringUtils.isEmpty(dateTo)) {
+            SimpleDateFormat df = new SimpleDateFormat(STR_PATTERN);
+            dateTo = activeOnlineService.getSpecifiedDayBeforeDay(df.format(new Date()), 1);
+            dateFrom = activeOnlineService.getSpecifiedDayBeforeDay(dateTo, Integer.parseInt(SystemConfig.getProperty("DEFAULT_WEEKS")));
+            logger.info("默认日期dateFrom=" + dateFrom + ",dateTo=" + dateTo);
+        }
+        if (StringUtils.isEmpty(productId)) {
+            logger.info("未传入productId");
+            //return;
+            productId = "001";
+        }
+        
+        List<WeekDimension> listWeekDimension = weekDimensionService.getWeekDimensions(productId, dateFrom, dateTo);
+        
+        String[] methodNames = { "getDateFromTo","getActive", "getActiveWrr", "getAvgDau", "getAvgDauWrr", "getAvgDauVsWau", 
+            "getAvgDauVsWauWrr", "getOnLineTime", "getOnLineTimeWrr" };
+        
+        String xlsPath = "classpath:/source.xlsx";
+        byte[] bytes = ImportExcel.loadScoreInfo(listWeekDimension, xlsPath, methodNames);
+        
+
+        response.setContentType("application/x-msdownload");
+        String filename = "WAU" + System.currentTimeMillis() + ".xlsx";
+        response.setHeader("Content-Disposition", "attachment;filename=" + filename);
+        response.setContentLength(bytes.length);
+        try {
+            if (response.getOutputStream() != null) {
+                response.getOutputStream().write(bytes);
+                response.getOutputStream().flush();
+                response.getOutputStream().close();
+            }
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+    }
